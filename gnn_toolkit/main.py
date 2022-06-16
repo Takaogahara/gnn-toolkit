@@ -3,6 +3,7 @@ import argparse
 from mango import Tuner
 from datetime import datetime
 
+from logo import print_logo
 from utils import ConfigFile, TelegramReport
 from run import start
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -52,6 +53,7 @@ class MangoExperiment:
         config["CLEARML_NAME"] = [experiment_name]
 
     def execute(self):
+        print_logo()
         print("initializing hyperparameter search...")
         print(f"Running on: {device}")
         TelegramReport.start_mango(device, self.task, self.iter,
