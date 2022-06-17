@@ -1,4 +1,6 @@
+import uuid
 import torch
+import mlflow.pytorch
 from mango import scheduler
 
 from utils import TelegramReport
@@ -46,27 +48,34 @@ def start(**parameters):
     Returns:
         int: Best loss
     """
-    # * Load DataLoaders
-    loader_train, loader_test = default_dataloader(parameters)
+    mlflow.set_experiment(parameters["MLFLOW_NAME"])
+    with mlflow.start_run(run_name=str(uuid.uuid4())) as _:
 
-    # * Get information
-    pos_weight, num_edge, num_feat = get_information(loader_train)
-    parameters["AUTO_LOSS_FN_POS_WEIGHT"] = pos_weight
-    parameters["MODEL_EDGE_DIM"] = num_edge
-    parameters["MODEL_FEAT_SIZE"] = num_feat
+        # * Load DataLoaders
+        loader_train, loader_test = default_dataloader(parameters)
 
-    # * Load Model
-    model = model_selection(parameters)
-    _ = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        # * Get information
+        pos_weight, num_edge, num_feat = get_information(loader_train)
+        parameters["AUTO_LOSS_FN_POS_WEIGHT"] = pos_weight
+        parameters["MODEL_EDGE_DIM"] = num_edge
+        parameters["MODEL_FEAT_SIZE"] = num_feat
 
-    # * Get optimizer, loss function, scheduler
-    optimizer, loss_fn = solver_selection(model, parameters)
-    torch_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-        optimizer, gamma=parameters["SOLVER_SCHEDULER_GAMMA"])
+        # * Log Parameters in mlflow
+        for key in parameters.keys():
+            mlflow.log_param(key, parameters[key])
 
-    # * Train
-    best_loss = fit(model, parameters, optimizer, loss_fn,
-                    loader_train, loader_test, torch_scheduler)
+        # * Load Model
+        model = model_selection(parameters)
+        _ = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-    TelegramReport.report_run(parameters["RUN_USE_TELEGRAM"])
-    return best_loss
+        # * Get optimizer, loss function, scheduler
+        optimizer, loss_fn = solver_selection(model, parameters)
+        torch_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer, gamma=parameters["SOLVER_SCHEDULER_GAMMA"])
+
+        # * Train
+        best_loss = fit(model, parameters, optimizer, loss_fn,
+                        loader_train, loader_test, torch_scheduler)
+
+        TelegramReport.report_run(parameters["RUN_TELEGRAM_VERBOSE"])
+        return best_loss

@@ -1,6 +1,9 @@
 import torch
 import numpy as np
 from tqdm import tqdm
+import mlflow.pytorch
+from mlflow.models.signature import ModelSignature
+from mlflow.types.schema import Schema, TensorSpec
 
 from .default_metrics import log_metrics
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -34,16 +37,26 @@ def fit(model, parameters: dict, optimizer, loss_fn,
         model.train()
         loss = _train_epoch(parameters, model, optimizer, loss_fn,
                             loader_train, epoch, num_epoch)
+        mlflow.log_metric(key="Train loss", value=float(loss), step=epoch)
 
         # * TEST
         model.eval()
-        if (epoch % 5 == 0) or (epoch == 1):
+        if (epoch % 2 == 0) or (epoch == 1):
             loss = _test_epoch(parameters, model, loss_fn,
                                loader_test, epoch)
+            mlflow.log_metric(key="Test loss", value=float(loss), step=epoch)
 
             # * Update update best loss
             if float(loss) < best_loss:
                 best_loss = loss
+
+                # * Save the currently best model and early stop
+                req = "./requirements.txt"
+                signature = get_mlflow_signature(parameters)
+                mlflow.pytorch.log_model(model, "model",
+                                         signature=signature,
+                                         pip_requirements=req)
+
                 early_stopping_counter = 0
 
             # * Update esarly stop
@@ -188,3 +201,30 @@ def _test_epoch(parameters, model, loss_fn, loader,
     log_metrics(task, name, "test", current_epoch, all_preds, all_labels)
 
     return running_loss/step
+
+
+def get_mlflow_signature(params_model):
+    """Calculate positive class weight to use in solver
+
+    Args:
+        dataset_train (Pytorch dataset): Generated dataset
+
+    Returns:
+        float: Weight
+    """
+    input_schema = Schema([TensorSpec(np.dtype(np.float32),
+                                      (-1, params_model["MODEL_FEAT_SIZE"]),
+                                      name="x"),
+                           TensorSpec(np.dtype(np.float32),
+                                      (-1, params_model["MODEL_EDGE_DIM"]),
+                                      name="edge_attr"),
+                           TensorSpec(np.dtype(np.int32),
+                                      (2, -1), name="edge_index"),
+                           TensorSpec(np.dtype(np.int32), (-1, 1),
+                                      name="batch_index")])
+
+    output_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, 1))])
+
+    signature = ModelSignature(inputs=input_schema, outputs=output_schema)
+
+    return signature

@@ -79,8 +79,23 @@ ________________________________________________________________________________
 <br/>
 
 ## **Usage**
+With all parameters configured correctly and with the `virtualenv` activated, you can proceed to the execution.
 
-With all parameters configured correctly and with the `virtualenv` activated, you can run the toolkit in the root folder with:
+### **1. With MLflow**
+Set `RUN_MLFLOW_URI` parameter to `http://localhost:5000` to use MLflow local tracker.  
+From the root folder, open the terminal and run:
+  ```console
+  mlflow ui
+  ```
+and then in another terminal:
+
+  ```console
+  python ./gnn_toolkit/main.py --cfg ./configs/config_file.yaml
+  ```
+
+### **2. Without MLflow**
+Set `RUN_MLFLOW_URI` parameter to `./mlruns` to store data "locally".  
+From the root folder, open the terminal and run:
   ```console
   python ./gnn_toolkit/main.py --cfg ./configs/config_file.yaml
   ```
