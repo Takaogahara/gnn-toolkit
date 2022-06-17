@@ -41,7 +41,7 @@ def fit(model, parameters: dict, optimizer, loss_fn,
 
         # * TEST
         model.eval()
-        if (epoch % 2 == 0) or (epoch == 1):
+        if (epoch % 5 == 0) or (epoch == 1):
             loss = _test_epoch(parameters, model, loss_fn,
                                loader_test, epoch)
             mlflow.log_metric(key="Test loss", value=float(loss), step=epoch)
@@ -51,11 +51,11 @@ def fit(model, parameters: dict, optimizer, loss_fn,
                 best_loss = loss
 
                 # * Save the currently best model and early stop
-                req = "./requirements.txt"
+                requirements = "./requirements.txt"
                 signature = get_mlflow_signature(parameters)
                 mlflow.pytorch.log_model(model, "model",
                                          signature=signature,
-                                         pip_requirements=req)
+                                         pip_requirements=requirements)
 
                 early_stopping_counter = 0
 
