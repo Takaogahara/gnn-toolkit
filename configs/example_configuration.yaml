@@ -9,8 +9,13 @@ RUN:
 - RUN_NAME: ["None"]
 # Number of hyperparameters search iterations
 - RUN_MANGO_ITER: [150]
-# Use Telegram to receve updates
-- RUN_USE_TELEGRAM: [False]
+# MLflow tracking URI
+- RUN_MLFLOW_URI: ["http://localhost:5000"]
+# Telegram updates verbose
+    # - 0 - None
+    # - 1 - Start/end
+    # - 2 - Start/end and MLflow run
+- RUN_TELEGRAM_VERBOSE: [0]
 
 # Data configuration
 DATA:

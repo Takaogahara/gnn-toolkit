@@ -1,11 +1,13 @@
 import torch
 import argparse
+import mlflow.pytorch
 from mango import Tuner
 from datetime import datetime
 
 from logo import print_logo
 from utils import ConfigFile, TelegramReport
 from run import start
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 ###############################################################################
@@ -39,7 +41,7 @@ class MangoExperiment:
         self.initial_rnd = 1
         self.domain_size = None
 
-        self.telegram = config["RUN_USE_TELEGRAM"][0]
+        self.telegram = config["RUN_TELEGRAM_VERBOSE"][0]
         self.epoch = config["DATA_NUM_EPOCH"][0]
         self.task = config["TASK"][0]
         model = config["MODEL_ARCHITECTURE"][0]
@@ -47,10 +49,12 @@ class MangoExperiment:
         experiment_name = config["RUN_NAME"][0]
         if experiment_name == "None":
             now = datetime.now()
-            now = now.strftime("%d/%m/%Y_%H:%M:%S")
+            now = now.strftime("%d-%m-%Y_%H:%M:%S")
             experiment_name = f"{self.task}_{model}_{now}"
 
-        config["CLEARML_NAME"] = [experiment_name]
+        config["MLFLOW_NAME"] = [experiment_name]
+        mlflow.set_tracking_uri(config["RUN_MLFLOW_URI"][0])
+        mlflow.create_experiment(f"{experiment_name}")
 
     def execute(self):
         print_logo()

@@ -9,7 +9,8 @@ parameters = {"TASK": ["Classification"],
 
               "RUN_NAME": ["None"],
               "RUN_MANGO_ITER": [1],
-              "RUN_USE_TELEGRAM": [False],
+              "RUN_MLFLOW_URI": ["http://localhost:5000"],
+              "RUN_TELEGRAM_VERBOSE": [0],
 
               "DATA_DATALOADER": ["Default"],
               "DATA_PREMADE": [True],
@@ -100,9 +101,9 @@ class ConfigFile:
 
 
 class TelegramReport:
-    def start_mango(device, task, iter, epochs, send=True):
-        if send:
-            gif = "https://c.tenor.com/P65A_6eQ26sAAAAS/run-running.gif"
+    def start_mango(device, task, iter, epochs, verbose=0):
+        if verbose != 0:
+            gif = "https://media.giphy.com/media/XoCI9HIAQEz1dSIvIy/giphy.gif"
             txt = ("New run detected!\n"
                    f"Run task: {task}\n"
                    f"Number of iterations: {iter}\n"
@@ -114,19 +115,20 @@ class TelegramReport:
         else:
             pass
 
-    def end_mango(results, send=True):
-        if send:
+    def end_mango(results, verbose=0):
+        if verbose != 0:
+            gif = "https://media.giphy.com/media/wJ6mHEehNx3OsE3LCD/giphy.gif"
             txt = ("###################\n"
                    "Run Finished\n"
                    f"Best parameters: {results['best_params']}\n"
                    f"Best accuracy: {results['best_objective']}")
 
-            telegram_send.send(messages=[txt])
+            telegram_send.send(captions=[txt], animations=[gif])
         else:
             pass
 
-    def report_run(send=True):
-        if send:
+    def report_run(verbose=0):
+        if verbose == 2:
             now = datetime.now()
             now = now.strftime("%d/%m/%Y %H:%M:%S")
 
