@@ -12,6 +12,6 @@ a8"    `Y88 88P'   `"8a 88P'   `"8a
                                       "Y888 `"YbbdP"'   `"YbbdP"'  88 88   `Y8a 88   "Y888
                                                                                           
                               Graph Neural Network Toolkit                                
-                                      Version: 0.1.0                                      
+                                      Version: 0.2.0                                      
                                                                                           
 """)
