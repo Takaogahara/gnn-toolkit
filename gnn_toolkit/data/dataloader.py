@@ -40,6 +40,8 @@ def default_dataloader(parameters: dict):
             lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
             lengths += [len(dataset) - sum(lengths)]
             set_train, set_test, _ = random_split(dataset, lengths)
+            set_train = set_train.dataset
+            set_test = set_test.dataset
 
         loader_train = DataLoader(set_train,
                                   batch_size=batch_size,

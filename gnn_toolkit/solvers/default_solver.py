@@ -53,7 +53,7 @@ def _get_optimizer(model, parameters: dict):
                                     weight_decay=l2_penalty)
 
     elif optim_name.lower() == "adam":
-        optimizer = torch.optim.adam(model.parameters(),
+        optimizer = torch.optim.Adam(model.parameters(),
                                      lr=lr,
                                      betas=(adam_beta_1, adam_beta_2),
                                      weight_decay=l2_penalty)
