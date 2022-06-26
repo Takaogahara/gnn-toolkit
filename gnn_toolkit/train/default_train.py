@@ -5,7 +5,7 @@ import mlflow.pytorch
 from mlflow.models.signature import ModelSignature
 from mlflow.types.schema import Schema, TensorSpec
 
-from .default_metrics import log_metrics
+from metrics.default_metrics import log_metrics
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
