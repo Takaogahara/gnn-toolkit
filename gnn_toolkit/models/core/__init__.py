@@ -5,9 +5,11 @@ from .gat import GAT
 from .transformer import Transformer
 
 
-if __name__ == "main":
-    Attentive
-    CGC
-    ECC
-    GAT
-    Transformer
+__all__ = [
+    "Attentive",
+    "CGC",
+    "ECC",
+    "GAT",
+    "Transformer", ]
+
+classes = __all__
