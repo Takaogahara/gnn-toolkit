@@ -1,14 +1,14 @@
-import matplotlib
-import pandas as pd
-import seaborn as sns
+# import matplotlib
+# import pandas as pd
+# import seaborn as sns
 import mlflow.pytorch
-import matplotlib.pyplot as plt
-from matplotlib.offsetbox import AnchoredText
+# import matplotlib.pyplot as plt
+# from matplotlib.offsetbox import AnchoredText
 from sklearn.metrics import (f1_score, accuracy_score, precision_score,
                              recall_score, roc_auc_score, mean_squared_error,
-                             mean_absolute_error, r2_score, matthews_corrcoef,
-                             ConfusionMatrixDisplay)
-matplotlib.rcParams['figure.figsize'] = [10, 7]
+                             mean_absolute_error, r2_score, matthews_corrcoef,)
+# ConfusionMatrixDisplay)
+# matplotlib.rcParams['figure.figsize'] = [10, 7]
 
 
 def log_metrics(task: str, name: str, eval_type: str,
@@ -60,19 +60,19 @@ def _log_classification(name, run: str, num: int, y_pred, y_true):
     mlflow.log_metric(key=f"MCC-{run}", value=float(mcc), step=num)
 
     # * Plot confusion matrix for test run
-    if run == "test":
-        cm_raw = ConfusionMatrixDisplay.from_predictions(y_true, y_pred,
-                                                         colorbar=False,
-                                                         cmap="Blues",
-                                                         normalize=None)
-        cm_norm = ConfusionMatrixDisplay.from_predictions(y_true, y_pred,
-                                                          colorbar=False,
-                                                          cmap="Blues",
-                                                          normalize="true")
+    # if (run == "test") or (num % 5 == 0) or (num == 1):
+    #     cm_raw = ConfusionMatrixDisplay.from_predictions(y_true, y_pred,
+    #                                                      colorbar=False,
+    #                                                      cmap="Blues",
+    #                                                      normalize=None)
+    #     cm_norm = ConfusionMatrixDisplay.from_predictions(y_true, y_pred,
+    #                                                       colorbar=False,
+    #                                                       cmap="Blues",
+    #                                                       normalize="true")
 
-        mlflow.log_figure(cm_raw.figure_, f"cm_{num}_raw.png")
-        mlflow.log_figure(cm_norm.figure_, f"cm_{num}_norm.png")
-        plt.close("all")
+    #     mlflow.log_figure(cm_raw.figure_, f"cm_{num}_raw.png")
+    #     mlflow.log_figure(cm_norm.figure_, f"cm_{num}_norm.png")
+    #     plt.close("all")
 
 
 def _log_regression(name, run: str, num: int, y_pred, y_true):
@@ -96,16 +96,16 @@ def _log_regression(name, run: str, num: int, y_pred, y_true):
     mlflow.log_metric(key=f"R2-{run}", value=float(r2), step=num)
 
     # * Plot regression for test run
-    if run == "test":
-        data = {"true": y_true, "pred": y_pred}
-        df_reg = pd.DataFrame.from_dict(data)
+    # if (run == "test") or (num % 5 == 0) or (num == 1):
+    #     data = {"true": y_true, "pred": y_pred}
+    #     df_reg = pd.DataFrame.from_dict(data)
 
-        fig = plt.figure(figsize=(10, 7))
-        reg_plot = sns.regplot(data=df_reg, x="true",
-                               y="pred", fit_reg=True)
-        ax = fig.axes[0]
-        anchored_text = AnchoredText(f"R2 = {round(r2, 4)}", loc=2)
-        ax.add_artist(anchored_text)
+    #     fig = plt.figure(figsize=(10, 7))
+    #     reg_plot = sns.regplot(data=df_reg, x="true",
+    #                            y="pred", fit_reg=True)
+    #     ax = fig.axes[0]
+    #     anchored_text = AnchoredText(f"R2 = {round(r2, 4)}", loc=2)
+    #     ax.add_artist(anchored_text)
 
-        mlflow.log_figure(reg_plot.figure, f"reg_{num}.png")
-        plt.close("all")
+    #     mlflow.log_figure(reg_plot.figure, f"reg_{num}.png")
+    #     plt.close("all")

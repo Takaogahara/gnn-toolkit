@@ -1,9 +1,8 @@
 import uuid
 import torch
 import mlflow.pytorch
-from mango import scheduler
 
-from utils import TelegramReport
+from utils import TelegramReport, extract_configs
 from data.dataloader import default_dataloader
 from models.model import model_selection
 from solvers.default_solver import solver_selection
@@ -38,8 +37,7 @@ def get_information(dataloader):
     return pos_weight, num_edge_features, num_features
 
 
-@scheduler.parallel(n_jobs=1)
-def start(**parameters):
+def gnn_toolkit(config, checkpoint_dir=None):
     """Start run
 
     Args:
@@ -48,6 +46,7 @@ def start(**parameters):
     Returns:
         int: Best loss
     """
+    parameters = extract_configs(config)
     mlflow.set_experiment(parameters["MLFLOW_NAME"])
     with mlflow.start_run(run_name=str(uuid.uuid4())) as _:
 

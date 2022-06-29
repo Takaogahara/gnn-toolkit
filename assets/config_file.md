@@ -19,10 +19,18 @@ In this section, the settings for the run are defined.
 RUN:
 # Experiment name
 - RUN_NAME: ["None"]
-# Number of hyperparameters search iterations
-- RUN_MANGO_ITER: [150]
 # MLflow tracking URI
 - RUN_MLFLOW_URI: ["http://localhost:5000"]
+# Number of hyperparameters search samples
+- RUN_RAY_SAMPLES: [100]
+# Max epoch number for Hyperband
+- RUN_RAY_MAX_EPOCH: [5]
+# CPU core number per trial (int or float)
+- RUN_RAY_CPU: [2]
+# GPU core number per trial (int or float)
+- RUN_RAY_GPU: [0]
+# Time budget to kill trials
+- RUN_RAY_TIME_BUDGET_S: [None]
 # Telegram updates verbose
     # - 0 - None
     # - 1 - Start/end
@@ -51,10 +59,6 @@ DATA:
 - DATA_RAW_FILE_NAME_TEST: ["filename.csv"]
 # Validation file name (csv)
 - DATA_RAW_FILE_NAME_VAL: ["filename.csv"]
-# Batch size
-- DATA_BATCH_SIZE: [64]
-# Number of epochs
-- DATA_NUM_EPOCH: [25]
   ```
 
 ### MODEL
@@ -103,6 +107,10 @@ This section is about solver hyperparameters.
 ```yaml
 # Solver configuration
 SOLVER:
+# Batch size
+- SOLVER_BATCH_SIZE: [64]
+# Number of epochs
+- SOLVER_NUM_EPOCH: [25]
 # Optimizer to be used
     # - SGD
     # - Adam

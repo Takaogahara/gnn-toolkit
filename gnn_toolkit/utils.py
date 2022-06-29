@@ -1,8 +1,9 @@
 import yaml
 import psutil
-from pynvml.smi import nvidia_smi
 import telegram_send
+from ray import tune
 from datetime import datetime
+from pynvml.smi import nvidia_smi
 
 
 parameters = {"TASK": ["Classification"],
@@ -22,8 +23,6 @@ parameters = {"TASK": ["Classification"],
               "DATA_RAW_FILE_NAME_TRAIN": ["filename.csv"],
               "DATA_RAW_FILE_NAME_TEST": ["filename.csv"],
               "DATA_RAW_FILE_NAME_VAL": ["filename.csv"],
-              "DATA_BATCH_SIZE": [32],
-              "DATA_NUM_EPOCH": [1],
 
               "MODEL_USE_TRANSFER": [False],
               "MODEL_TRANSFER_PATH":  ["path/to/model"],
@@ -37,6 +36,8 @@ parameters = {"TASK": ["Classification"],
               "MODEL_TOP_K_RATIO": [0.5],
               "MODEL_TOP_K_EVERY_N": [1],
 
+              "SOLVER_BATCH_SIZE": [32],
+              "SOLVER_NUM_EPOCH": [1],
               "SOLVER_OPTIMIZER": ["SGD"],
               "SOLVER_LEARNING_RATE": [0.01],
               "SOLVER_L2_PENALTY": [0.001],
@@ -47,62 +48,60 @@ parameters = {"TASK": ["Classification"],
               "SOLVER_ADAM_BETA_2": [0.999]}
 
 
-class ConfigFile:
-    def __init__(config):
-        pass
+def get_ray_config(yaml_path: str):
+    """ Open YAML file and and process to parse in Ray Tune
 
-    def get_raw_config(self, yaml_path: str):
-        """ Open YAML file and and process to parse in Mango
+    Args:
+        yaml_path (str): path to YAML file
 
-        Args:
-            yaml_path (str): path to YAML file
+    Returns:
+        Dict: Processed YAML file
+    """
+    with open(yaml_path, "r") as f:
+        file = yaml.safe_load(f)
 
-        Returns:
-            Dict: Processed YAML file (CONFIG)
-        """
-        with open(yaml_path, "r") as f:
-            file = yaml.safe_load(f)
+    content = {"TASK": file["TASK"]}
+    content_list = [file["RUN"], file["DATA"],
+                    file["MODEL"], file["SOLVER"]]
 
-        content = {"TASK": file["TASK"]}
-        content_list = [file["RUN"], file["DATA"],
-                        file["MODEL"], file["SOLVER"]]
+    for value in content_list:
+        for item in value:
+            key, value = list(item.items())[0]
+            content[key] = value
 
-        for value in content_list:
-            for item in value:
-                key, value = list(item.items())[0]
-                content[key] = value
-
-        # * Auto complete config file
-        for key, value in list(content.items()):
+    # * Auto complete config file
+    for key, value in list(content.items()):
+        if ("MODEL_" in key) or ("SOLVER_" in key):
+            parameters[key] = tune.choice(value)
+        else:
             parameters[key] = value
 
-        return parameters
+    return parameters
 
-    def extract_cfg(self, config_file: dict, return_self=False):
-        """Extract YAML file
 
-        Args:
-            config_file (dict): Processed YAML file
+def extract_configs(config_file: dict):
+    """Extract YAML file
 
-        Returns:
-            Dict: Extracted YAML file
-        """
+    Args:
+        config_file (dict): Processed YAML file
 
-        # * Extract config file
-        if len(config_file) == 1:
-            config_file = config_file[0]
+    Returns:
+        Dict: Extracted YAML file
+    """
 
-        parameters_new = {k: v for k, v in config_file.items()}
-        parameters_new["TASK"] = config_file["TASK"]
+    # * Extract config file
+    parameters_new = {}
+    for key, value in config_file.items():
+        if isinstance(value, list):
+            parameters_new[key] = value[0]
+        else:
+            parameters_new[key] = value
 
-        if return_self:
-            self.cfg = parameters
-
-        return parameters
+    return parameters_new
 
 
 class TelegramReport:
-    def start_mango(device, task, iter, epochs, verbose=0):
+    def start_eval(device, task, iter, epochs, verbose=0):
         if verbose != 0:
             gif = "https://media.giphy.com/media/XoCI9HIAQEz1dSIvIy/giphy.gif"
             txt = ("New run detected!\n"
@@ -116,7 +115,7 @@ class TelegramReport:
         else:
             pass
 
-    def end_mango(results, verbose=0):
+    def end_eval(results, verbose=0):
         if verbose != 0:
             gif = "https://media.giphy.com/media/wJ6mHEehNx3OsE3LCD/giphy.gif"
             txt = ("###################\n"

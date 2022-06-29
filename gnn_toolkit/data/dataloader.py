@@ -1,3 +1,4 @@
+from filelock import FileLock
 from torch.utils.data import random_split
 from torch_geometric.loader import DataLoader
 
@@ -14,7 +15,7 @@ def default_dataloader(parameters: dict):
     """
     task = parameters["TASK"]
     loader = parameters["DATA_DATALOADER"]
-    batch_size = parameters["DATA_BATCH_SIZE"]
+    batch_size = parameters["SOLVER_BATCH_SIZE"]
     premade = parameters["DATA_PREMADE"]
 
     path_raw = parameters["DATA_RAW_PATH"]
@@ -26,8 +27,11 @@ def default_dataloader(parameters: dict):
         raise RuntimeError("Wrong loader, Available: \n"
                            f"{available_loaders}")
 
+    # TODO: "Universal" dataloader for premade
+
     if loader.lower() == "default":
         # * Get dataset
+        # TODO: FileLock premade
         if premade:
             # Use pre made dataset
             set_train = MoleculeDataset(path_raw, name_train, task)
@@ -36,12 +40,13 @@ def default_dataloader(parameters: dict):
 
         else:
             # Get random split (80, 10, 10)
-            dataset = MoleculeDataset(path_raw, name_train, task)
-            lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
-            lengths += [len(dataset) - sum(lengths)]
-            set_train, set_test, _ = random_split(dataset, lengths)
-            set_train = set_train.dataset
-            set_test = set_test.dataset
+            with FileLock(f"{path_raw}raw/{name_train}.lock"):
+                dataset = MoleculeDataset(path_raw, name_train, task)
+                lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
+                lengths += [len(dataset) - sum(lengths)]
+                set_train, set_test, _ = random_split(dataset, lengths)
+                set_train = set_train.dataset
+                set_test = set_test.dataset
 
         loader_train = DataLoader(set_train,
                                   batch_size=batch_size,
