@@ -1,3 +1,4 @@
+import os
 import uuid
 import torch
 import argparse
@@ -7,7 +8,7 @@ from ray.tune.schedulers import ASHAScheduler
 
 from logo import print_logo
 from utils import get_ray_config, TelegramReport
-from run import gnn_toolkit
+from run import gnn_toolkit, test_best_model
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -88,6 +89,17 @@ class RayExperiment:
         print(f"Best loss: {best_trial.last_result['loss']}")
         TelegramReport.end_eval(result, self.telegram)
 
+        return best_trial
 
-exp = RayExperiment(ray_space)
-exp.execute()
+    def test_model(best_trial):
+        best_config = best_trial.config
+
+        chkp_path = os.path.join(best_trial.checkpoint.value, "checkpoint")
+        best_trial.config["chkp_path"] = chkp_path
+
+        test_best_model(best_config)
+
+
+ray_tune = RayExperiment(ray_space)
+best_trial = ray_tune.execute()
+ray_tune.test_model(best_trial)

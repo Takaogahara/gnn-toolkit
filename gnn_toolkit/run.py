@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import mlflow.pytorch
 from ray.tune.integration.mlflow import mlflow_mixin
 
@@ -7,6 +8,7 @@ from data.dataloader import default_dataloader
 from models.model import model_selection
 from solvers.default_solver import solver_selection
 from train.default_train import fit
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def get_information(dataloader):
@@ -42,7 +44,7 @@ def gnn_toolkit(config, checkpoint_dir=None):
     """Start run
 
     Args:
-        parameters (dict): Mango parsed parameters
+        parameters (dict): Ray Tune parsed parameters
 
     Returns:
         int: Best loss
@@ -59,13 +61,14 @@ def gnn_toolkit(config, checkpoint_dir=None):
     parameters["MODEL_EDGE_DIM"] = num_edge
     parameters["MODEL_FEAT_SIZE"] = num_feat
 
+    # * Load Model
+    model = model_selection(parameters)
+    complexity = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    parameters["MODEL_COMPLEXITY"] = complexity
+
     # * Log Parameters in mlflow
     for key in parameters.keys():
         mlflow.log_param(key, parameters[key])
-
-    # * Load Model
-    model = model_selection(parameters)
-    _ = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
     # * Get optimizer, loss function, scheduler
     optimizer, loss_fn = solver_selection(model, parameters)
@@ -78,3 +81,49 @@ def gnn_toolkit(config, checkpoint_dir=None):
 
     TelegramReport.report_run(parameters["RUN_TELEGRAM_VERBOSE"])
     return best_loss
+
+
+def test_best_model(config):
+    """Test best parameters with validation dataset
+
+    Args:
+        config (dict): Ray Tune parsed parameters
+    """
+    all_preds = []
+    all_labels = []
+    parameters = extract_configs(config)
+
+    # * Load DataLoaders
+    loader_valid = default_dataloader(parameters, checkpoint=True)
+
+    # * Get information
+    pos_weight, num_edge, num_feat = get_information(loader_valid)
+    parameters["AUTO_LOSS_FN_POS_WEIGHT"] = pos_weight
+    parameters["MODEL_EDGE_DIM"] = num_edge
+    parameters["MODEL_FEAT_SIZE"] = num_feat
+
+    # * Load Model
+    model = model_selection(parameters, checkpoint=True)
+
+    # * Predict
+    with torch.no_grad():
+        for batch in loader_valid:
+            # * Use GPU
+            batch.to(device)
+
+            # * Passing the node features and the connection info
+            pred = model(x=batch.x.float(),
+                         edge_index=batch.edge_index,
+                         edge_attr=batch.edge_attr.float(),
+                         batch=batch.batch)
+
+            # * Save pred results
+            all_preds.append(np.rint(torch.sigmoid(pred).cpu(
+            ).detach().numpy()))
+            all_labels.append(batch.y.cpu().detach().numpy())
+
+        all_preds = np.concatenate(all_preds).ravel()
+        all_labels = np.concatenate(all_labels).ravel()
+
+    correct = (all_preds == all_labels).sum().item()
+    print(f"Best trial test set accuracy: {correct / len(all_labels)}")

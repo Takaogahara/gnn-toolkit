@@ -10,7 +10,7 @@ moleculenet_dataset = ["esol", "freesolv", "lipo", "pcba",
                        "toxcast", "sider", "clintox"]
 
 
-def default_dataloader(parameters: dict):
+def default_dataloader(parameters: dict, checkpoint=False):
     """Create dafault Dataloader
 
     Args:
@@ -34,7 +34,7 @@ def default_dataloader(parameters: dict):
             # Get premade split
             with FileLock(f"{path_raw}raw/{name_train}.lock"):
                 dataset = MoleculeDataset(path_raw, name_train, task, True)
-                set_train, set_test, _ = _get_premade_loaders(dataset)
+                set_train, set_test, valid_set = _get_premade_loaders(dataset)
 
         else:
             # Get random split (80, 10, 10)
@@ -43,23 +43,30 @@ def default_dataloader(parameters: dict):
                 dataset = MoleculeDataset(path_raw, name_train, task)
                 lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
                 lengths += [len(dataset) - sum(lengths)]
-                set_train, set_test, _ = random_split(dataset, lengths)
+                set_train, set_test, valid_set = random_split(dataset, lengths)
                 set_train = set_train.dataset
                 set_test = set_test.dataset
+                valid_set = valid_set.dataset
 
-        loader_train = DataLoader(set_train,
-                                  batch_size=batch_size,
-                                  shuffle=True)
-        loader_test = DataLoader(set_test,
-                                 batch_size=batch_size,
-                                 shuffle=True)
+        ldl_train = DataLoader(set_train,
+                               batch_size=batch_size,
+                               shuffle=True)
+        ldl_test = DataLoader(set_test,
+                              batch_size=batch_size,
+                              shuffle=True)
+        ldl_test = DataLoader(valid_set,
+                              batch_size=batch_size,
+                              shuffle=True)
 
     elif loader.lower() in moleculenet_dataset:
-        loader_train, loader_test, _ = benchmark_MoleculeNet(path_raw,
-                                                             loader.lower(),
-                                                             batch_size)
+        ldl_train, ldl_test, ldl_valid = benchmark_MoleculeNet(path_raw,
+                                                               loader.lower(),
+                                                               batch_size)
 
-    return loader_train, loader_test
+    if checkpoint:
+        return ldl_valid
+    else:
+        return ldl_train, ldl_test
 
 
 def _get_premade_loaders(dataset):
