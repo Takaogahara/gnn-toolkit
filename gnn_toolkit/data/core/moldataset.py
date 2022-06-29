@@ -64,6 +64,7 @@ class MoleculeDataset(Dataset):
             # * Save premade
             try:
                 data.set = mol["Set"]
+                data.index = index
                 if data.set == "Test":
                     torch.save(data,
                                os.path.join(self.processed_dir,
@@ -93,3 +94,23 @@ class MoleculeDataset(Dataset):
 
     def len(self):
         return self.data.shape[0]
+
+    def get(self, idx):
+        """ - Equivalent to __getitem__ in pytorch
+            - Is not needed for PyG's InMemoryDataset
+        """
+        try:
+            data = torch.load(os.path.join(self.processed_dir,
+                                           f'data_test_{idx}.pt'))
+        except FileNotFoundError:
+            try:
+                data = torch.load(os.path.join(self.processed_dir,
+                                               f'data_val_{idx}.pt'))
+            except FileNotFoundError:
+                try:
+                    data = torch.load(os.path.join(self.processed_dir,
+                                                   f'data_train_{idx}.pt'))
+                except FileNotFoundError:
+                    data = torch.load(os.path.join(self.processed_dir,
+                                                   f'data_{idx}.pt'))
+        return data

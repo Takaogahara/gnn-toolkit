@@ -5,6 +5,9 @@ from torch_geometric.loader import DataLoader
 from .core import benchmark_MoleculeNet, MoleculeDataset
 
 available_loaders = ["default", "moleculenet"]
+moleculenet_dataset = ["esol", "freesolv", "lipo", "pcba",
+                       "muv", "hiv", "bace", "bbpb", "tox21",
+                       "toxcast", "sider", "clintox"]
 
 
 def default_dataloader(parameters: dict):
@@ -15,8 +18,7 @@ def default_dataloader(parameters: dict):
     """
     task = parameters["TASK"]
     loader = parameters["DATA_DATALOADER"]
-    # batch_size = parameters["SOLVER_BATCH_SIZE"]
-    batch_size = 32
+    batch_size = parameters["SOLVER_BATCH_SIZE"]
     premade = parameters["DATA_PREMADE"]
 
     path_raw = parameters["DATA_ROOT_PATH"]
@@ -32,14 +34,11 @@ def default_dataloader(parameters: dict):
             # Get premade split
             with FileLock(f"{path_raw}raw/{name_train}.lock"):
                 dataset = MoleculeDataset(path_raw, name_train, task, True)
-                data_path = dataset.processed_paths
-
-                set_train = [x for x in data_path if "data_train_" in x]
-                set_test = [x for x in data_path if "data_test_" in x]
-                _ = [x for x in data_path if "data_test_" in x]
+                set_train, set_test, _ = _get_premade_loaders(dataset)
 
         else:
             # Get random split (80, 10, 10)
+            # TODO: Check for errors in random split
             with FileLock(f"{path_raw}raw/{name_train}.lock"):
                 dataset = MoleculeDataset(path_raw, name_train, task)
                 lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
@@ -55,8 +54,24 @@ def default_dataloader(parameters: dict):
                                  batch_size=batch_size,
                                  shuffle=True)
 
-    elif loader.lower() == "moleculenet":
-        loader_train, loader_test, _ = benchmark_MoleculeNet(path_raw, "HIV",
+    elif loader.lower() in moleculenet_dataset:
+        loader_train, loader_test, _ = benchmark_MoleculeNet(path_raw,
+                                                             loader.lower(),
                                                              batch_size)
 
     return loader_train, loader_test
+
+
+def _get_premade_loaders(dataset):
+    train = [dataset[x].index for x in range(len(dataset)
+                                             ) if dataset[x].set == "Train"]
+    test = [dataset[x].index for x in range(len(dataset)
+                                            ) if dataset[x].set == "Test"]
+    valid = [dataset[x].index for x in range(len(dataset)
+                                             ) if dataset[x].set == "Valid"]
+
+    set_train = dataset[train]
+    set_test = dataset[test]
+    set_valid = dataset[valid]
+
+    return set_train, set_test, set_valid
