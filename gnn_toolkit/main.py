@@ -27,9 +27,12 @@ args = parser.parse_args()
 ###############################################################################
 ray_space = get_ray_config(args.cfg)
 
+
 ###############################################################################
 # Hyperparameter search
 ###############################################################################
+def trial_str_creator(trial):
+    return "{}_{}".format(trial.trainable_name, trial.trial_id)
 
 
 class RayExperiment:
@@ -42,6 +45,7 @@ class RayExperiment:
         self.gpu = ray_space["RUN_RAY_GPU"][0]
         self.budget = ray_space["RUN_RAY_TIME_BUDGET_S"][0]
 
+        self.mlflow_uri = ray_space["RUN_MLFLOW_URI"][0]
         self.telegram = ray_space["RUN_TELEGRAM_VERBOSE"][0]
         self.epoch = ray_space["SOLVER_NUM_EPOCH"][0]
         self.task = ray_space["TASK"][0]
@@ -51,8 +55,10 @@ class RayExperiment:
             self.experiment_name = str(uuid.uuid4()).split("-")[0]
 
         ray_space["MLFLOW_NAME"] = [self.experiment_name]
-        mlflow.set_tracking_uri(ray_space["RUN_MLFLOW_URI"][0])
-        mlflow.create_experiment(f"{self.experiment_name}")
+        mlflow.set_tracking_uri(self.mlflow_uri)
+        mlflow.create_experiment(self.experiment_name)
+        ray_space["mlflow"] = {"experiment_name": self.experiment_name,
+                               "tracking_uri": mlflow.get_tracking_uri(), }
 
     def execute(self):
         print_logo()
@@ -74,6 +80,7 @@ class RayExperiment:
                           metric="loss",
                           mode="min",
                           local_dir="./ray_results",
+                          trial_name_creator=trial_str_creator,
                           verbose=2)
 
         best_trial = result.get_best_trial("loss", "min", "last")

@@ -4,11 +4,13 @@ import numpy as np
 from ray import tune
 from tqdm import tqdm
 import mlflow.pytorch
+from ray.tune.integration.mlflow import mlflow_mixin
 
 from .default_metrics import log_metrics
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
+@mlflow_mixin
 def fit(model, parameters: dict, optimizer, loss_fn,
         loader_train, loader_test, torch_scheduler):
     """Control training phase
