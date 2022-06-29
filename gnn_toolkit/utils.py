@@ -8,8 +8,12 @@ from datetime import datetime
 parameters = {"TASK": ["Classification"],
 
               "RUN_NAME": ["None"],
-              "RUN_MANGO_ITER": [1],
               "RUN_MLFLOW_URI": ["http://localhost:5000"],
+              "RUN_RAY_SAMPLES": [1],
+              "RUN_RAY_MAX_EPOCH": [1],
+              "RUN_RAY_CPU": [2],
+              "RUN_RAY_GPU": [0],
+              "RUN_RAY_TIME_BUDGET_S": [None],
               "RUN_TELEGRAM_VERBOSE": [0],
 
               "DATA_DATALOADER": ["Default"],
@@ -41,9 +45,6 @@ parameters = {"TASK": ["Classification"],
               "SOLVER_SGD_MOMENTUM": [0.8],
               "SOLVER_ADAM_BETA_1": [0.9],
               "SOLVER_ADAM_BETA_2": [0.999]}
-
-# * Add new targets to get_param func
-targets = ["DATA_", "SOLVER_", "MODEL_"]
 
 
 class ConfigFile:
