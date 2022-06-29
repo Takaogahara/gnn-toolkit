@@ -8,16 +8,15 @@ from torch_geometric.data import Dataset
 
 
 class MoleculeDataset(Dataset):
-    def __init__(self, root, filename, task, test=False, val=False,
+    def __init__(self, root, filename, task, premade=False,
                  transform=None, pre_transform=None):
         """
         root = Where the dataset should be stored. This folder is split
         into raw_dir (downloaded dataset) and processed_dir (processed data).
         """
-        self.test = test
-        self.validation = val
         self.task = task
         self.filename = filename
+        self.premade = premade
         super(MoleculeDataset, self).__init__(root, transform, pre_transform)
 
     @property
@@ -32,10 +31,17 @@ class MoleculeDataset(Dataset):
         """ If these files are found in raw_dir, processing is skipped"""
         self.data = pd.read_csv(self.raw_paths[0]).reset_index()
 
-        if self.test:
-            return [f'data_test_{i}.pt' for i in list(self.data.index)]
-        elif self.validation:
-            return [f'data_val_{i}.pt' for i in list(self.data.index)]
+        if self.premade:
+            df_train = self.data[self.data["Set"] == "Train"]
+            df_test = self.data[self.data["Set"] == "Test"]
+            df_valid = self.data[self.data["Set"] == "Valid"]
+
+            list_train = [f'data_train_{i}.pt' for i in list(df_train.index)]
+            list_test = [f'data_test_{i}.pt' for i in list(df_test.index)]
+            list_valid = [f'data_val_{i}.pt' for i in list(df_valid.index)]
+
+            return list_train + list_test + list_valid
+
         else:
             return [f'data_{i}.pt' for i in list(self.data.index)]
 
@@ -54,15 +60,23 @@ class MoleculeDataset(Dataset):
             data = f[0].to_pyg_graph()
             data.y = self._get_label(mol["Labels"])
             data.smiles = mol["Smiles"]
-            if self.test:
-                torch.save(data,
-                           os.path.join(self.processed_dir,
-                                        f'data_test_{index}.pt'))
-            elif self.validation:
-                torch.save(data,
-                           os.path.join(self.processed_dir,
-                                        f'data_val_{index}.pt'))
-            else:
+
+            # * Save premade
+            try:
+                data.set = mol["Set"]
+                if data.set == "Test":
+                    torch.save(data,
+                               os.path.join(self.processed_dir,
+                                            f'data_test_{index}.pt'))
+                elif data.set == "Valid":
+                    torch.save(data,
+                               os.path.join(self.processed_dir,
+                                            f'data_val_{index}.pt'))
+                elif data.set == "Train":
+                    torch.save(data,
+                               os.path.join(self.processed_dir,
+                                            f'data_train_{index}.pt'))
+            except KeyError:
                 torch.save(data,
                            os.path.join(self.processed_dir,
                                         f'data_{index}.pt'))
@@ -79,18 +93,3 @@ class MoleculeDataset(Dataset):
 
     def len(self):
         return self.data.shape[0]
-
-    def get(self, idx):
-        """ - Equivalent to __getitem__ in pytorch
-            - Is not needed for PyG's InMemoryDataset
-        """
-        if self.test:
-            data = torch.load(os.path.join(self.processed_dir,
-                                           f'data_test_{idx}.pt'))
-        elif self.validation:
-            data = torch.load(os.path.join(self.processed_dir,
-                                           f'data_val_{idx}.pt'))
-        else:
-            data = torch.load(os.path.join(self.processed_dir,
-                                           f'data_{idx}.pt'))
-        return data

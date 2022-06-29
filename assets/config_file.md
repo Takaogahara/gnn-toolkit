@@ -51,14 +51,10 @@ DATA:
 - DATA_DATALOADER: ["Default"]
 # Dataset separation already made
 - DATA_PREMADE: [True]
-# Path to train, test and validation files
-- DATA_RAW_PATH: ["path/to/folder"]
-# Train file name (csv)
-- DATA_RAW_FILE_NAME_TRAIN: ["filename.csv"]
-# Test file name (csv)
-- DATA_RAW_FILE_NAME_TEST: ["filename.csv"]
-# Validation file name (csv)
-- DATA_RAW_FILE_NAME_VAL: ["filename.csv"]
+# Path to files root directory
+- DATA_ROOT_PATH: ["path/to/folder"]
+# Data filename
+- DATA_FILE_NAME: ["filename.csv"]
   ```
 
 ### MODEL

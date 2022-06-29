@@ -19,10 +19,8 @@ parameters = {"TASK": ["Classification"],
 
               "DATA_DATALOADER": ["Default"],
               "DATA_PREMADE": [True],
-              "DATA_RAW_PATH": ["path/to/data"],
-              "DATA_RAW_FILE_NAME_TRAIN": ["filename.csv"],
-              "DATA_RAW_FILE_NAME_TEST": ["filename.csv"],
-              "DATA_RAW_FILE_NAME_VAL": ["filename.csv"],
+              "DATA_ROOT_PATH": ["path/to/data"],
+              "DATA_FILE_NAME": ["filename.csv"],
 
               "MODEL_USE_TRANSFER": [False],
               "MODEL_TRANSFER_PATH":  ["path/to/model"],

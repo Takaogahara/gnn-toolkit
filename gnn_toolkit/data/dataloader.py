@@ -2,7 +2,7 @@ from filelock import FileLock
 from torch.utils.data import random_split
 from torch_geometric.loader import DataLoader
 
-from .core import MoleculeDataset, benchmark_MoleculeNet
+from .core import benchmark_MoleculeNet, MoleculeDataset
 
 available_loaders = ["default", "moleculenet"]
 
@@ -15,28 +15,28 @@ def default_dataloader(parameters: dict):
     """
     task = parameters["TASK"]
     loader = parameters["DATA_DATALOADER"]
-    batch_size = parameters["SOLVER_BATCH_SIZE"]
+    # batch_size = parameters["SOLVER_BATCH_SIZE"]
+    batch_size = 32
     premade = parameters["DATA_PREMADE"]
 
-    path_raw = parameters["DATA_RAW_PATH"]
-    name_train = parameters["DATA_RAW_FILE_NAME_TRAIN"]
-    name_test = parameters["DATA_RAW_FILE_NAME_TEST"]
-    name_val = parameters["DATA_RAW_FILE_NAME_VAL"]
+    path_raw = parameters["DATA_ROOT_PATH"]
+    name_train = parameters["DATA_FILE_NAME"]
 
     if loader.lower() not in available_loaders:
         raise RuntimeError("Wrong loader, Available: \n"
                            f"{available_loaders}")
 
-    # TODO: "Universal" dataloader for premade
-
+    # * Get dataset
     if loader.lower() == "default":
-        # * Get dataset
-        # TODO: FileLock premade
         if premade:
-            # Use pre made dataset
-            set_train = MoleculeDataset(path_raw, name_train, task)
-            set_test = MoleculeDataset(path_raw, name_test, task, test=True)
-            _ = MoleculeDataset(path_raw, name_val, task, val=True)
+            # Get premade split
+            with FileLock(f"{path_raw}raw/{name_train}.lock"):
+                dataset = MoleculeDataset(path_raw, name_train, task, True)
+                data_path = dataset.processed_paths
+
+                set_train = [x for x in data_path if "data_train_" in x]
+                set_test = [x for x in data_path if "data_test_" in x]
+                _ = [x for x in data_path if "data_test_" in x]
 
         else:
             # Get random split (80, 10, 10)
