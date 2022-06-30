@@ -56,10 +56,9 @@ class RayExperiment:
             self.experiment_name = str(uuid.uuid4()).split("-")[0]
 
         ray_space["MLFLOW_NAME"] = [self.experiment_name]
-        mlflow.set_tracking_uri(self.mlflow_uri)
         mlflow.create_experiment(self.experiment_name)
         ray_space["mlflow"] = {"experiment_name": self.experiment_name,
-                               "tracking_uri": mlflow.get_tracking_uri(), }
+                               "tracking_uri": mlflow.get_tracking_uri()}
 
     def execute(self):
         print_logo()
@@ -69,7 +68,7 @@ class RayExperiment:
                                   self.telegram)
 
         scheduler = ASHAScheduler(max_t=self.max_epoch,
-                                  grace_period=1, reduction_factor=2)
+                                  grace_period=1, reduction_factor=1.2)
 
         resources = {"cpu": self.cpu, "gpu": self.gpu}
         result = tune.run(tune.with_parameters(self.objective),
@@ -82,22 +81,25 @@ class RayExperiment:
                           mode="min",
                           local_dir="./ray_results",
                           trial_name_creator=trial_str_creator,
-                          verbose=2)
+                          trial_dirname_creator=trial_str_creator,
+                          verbose=3)
 
         best_trial = result.get_best_trial("loss", "min", "last")
         print(f"\nBest parameters: {best_trial.config}\n")
         print(f"Best loss: {best_trial.last_result['loss']}")
-        TelegramReport.end_eval(result, self.telegram)
+        TelegramReport.end_eval(best_trial, self.telegram)
 
         return best_trial
 
-    def test_model(best_trial):
+    def test_model(self, best_trial):
         best_config = best_trial.config
 
         chkp_path = os.path.join(best_trial.checkpoint.value, "checkpoint")
         best_trial.config["chkp_path"] = chkp_path
 
         test_best_model(best_config)
+        print(f"Best trial dir: {best_trial.logdir}")
+        # TODO: Save best model
 
 
 ray_tune = RayExperiment(ray_space)

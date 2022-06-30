@@ -50,7 +50,6 @@ def gnn_toolkit(config, checkpoint_dir=None):
         int: Best loss
     """
     parameters = extract_configs(config)
-    mlflow.set_experiment(parameters["MLFLOW_NAME"])
 
     # * Load DataLoaders
     loader_train, loader_test = default_dataloader(parameters)

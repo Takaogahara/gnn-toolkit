@@ -54,9 +54,9 @@ def default_dataloader(parameters: dict, checkpoint=False):
         ldl_test = DataLoader(set_test,
                               batch_size=batch_size,
                               shuffle=True)
-        ldl_test = DataLoader(valid_set,
-                              batch_size=batch_size,
-                              shuffle=True)
+        ldl_valid = DataLoader(valid_set,
+                               batch_size=batch_size,
+                               shuffle=True)
 
     elif loader.lower() in moleculenet_dataset:
         ldl_train, ldl_test, ldl_valid = benchmark_MoleculeNet(path_raw,

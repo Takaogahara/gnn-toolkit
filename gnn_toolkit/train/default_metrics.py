@@ -1,7 +1,7 @@
-import matplotlib
 import pandas as pd
 import seaborn as sns
 import mlflow.pytorch
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from ray.tune.integration.mlflow import mlflow_mixin
@@ -9,34 +9,34 @@ from sklearn.metrics import (f1_score, accuracy_score, precision_score,
                              recall_score, roc_auc_score, mean_squared_error,
                              mean_absolute_error, r2_score, matthews_corrcoef,
                              ConfusionMatrixDisplay)
-matplotlib.rcParams['figure.figsize'] = [10, 7]
+mpl.rcParams['figure.figsize'] = [10, 7]
+mpl.use('Agg')
 
 
-def log_metrics(task: str, name: str, eval_type: str,
+@mlflow_mixin
+def log_metrics(task: str, eval_type: str,
                 current_epoch: int, y_pred, y_true):
     """External function for compute metrics
 
     Args:
         task (str): Current task
-        name (str): Experiment name
         eval_type (str): Evaluation type
         current_epoch (int): Current epoch
         y_pred (_type_): Y pred
         y_true (_type_): Y true
     """
     if task == "Classification":
-        _log_classification(name, eval_type, current_epoch,  y_pred, y_true)
+        _log_classification(eval_type, current_epoch,  y_pred, y_true)
 
     elif task == "Regression":
-        _log_regression(name, eval_type, current_epoch,  y_pred, y_true)
+        _log_regression(eval_type, current_epoch,  y_pred, y_true)
 
 
 @mlflow_mixin
-def _log_classification(name, run: str, num: int, y_pred, y_true):
+def _log_classification(run: str, num: int, y_pred, y_true):
     """Calculate and log to mlflow classification metrics
 
     Args:
-        name (str): Experiment name
         run (str): Evaluation type
         num (int): Current epoch
         y_pred (_type_): Y pred
@@ -78,11 +78,10 @@ def _log_classification(name, run: str, num: int, y_pred, y_true):
 
 
 @mlflow_mixin
-def _log_regression(name, run: str, num: int, y_pred, y_true):
+def _log_regression(run: str, num: int, y_pred, y_true):
     """Calculate and log to mlflow regression metrics
 
     Args:
-        name (str): Experiment name
         run (str): Evaluation type
         num (int): Current epoch
         y_pred (_type_): Y pred

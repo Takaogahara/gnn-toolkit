@@ -52,9 +52,9 @@ def fit(model, parameters: dict, optimizer, loss_fn,
             path = os.path.join(checkpoint_dir, "checkpoint")
             torch.save((model.state_dict(), optimizer.state_dict()), path)
 
+        tune.report(loss=loss_ts)
     # print(f"Finishing training with best test loss: {best_loss}")
     # print("############################################## End\n")
-    tune.report(loss=loss_ts)
 
 
 def _train_epoch(parameters, model, optimizer, loss_fn,
@@ -74,7 +74,6 @@ def _train_epoch(parameters, model, optimizer, loss_fn,
         float: Loss
     """
     task = parameters["TASK"]
-    name = parameters["RUN_NAME"]
 
     all_preds = []
     all_labels = []
@@ -126,7 +125,7 @@ def _train_epoch(parameters, model, optimizer, loss_fn,
         all_preds = np.concatenate(all_preds).ravel()
         all_labels = np.concatenate(all_labels).ravel()
 
-        log_metrics(task, name, "train", current_epoch, all_preds, all_labels)
+        log_metrics(task, "train", current_epoch, all_preds, all_labels)
 
         return running_loss/step
 
@@ -147,7 +146,6 @@ def _test_epoch(parameters, model, loss_fn, loader,
         float: Loss
     """
     task = parameters["TASK"]
-    name = parameters["RUN_NAME"]
 
     all_preds = []
     all_labels = []
@@ -180,6 +178,6 @@ def _test_epoch(parameters, model, loss_fn, loader,
     all_preds = np.concatenate(all_preds).ravel()
     all_labels = np.concatenate(all_labels).ravel()
 
-    log_metrics(task, name, "test", current_epoch, all_preds, all_labels)
+    log_metrics(task, "test", current_epoch, all_preds, all_labels)
 
     return running_loss/step

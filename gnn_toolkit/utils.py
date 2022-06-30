@@ -67,6 +67,7 @@ def get_ray_config(yaml_path: str):
             key, value = list(item.items())[0]
             content[key] = value
 
+    # TODO: Fix auto complete
     # * Auto complete config file
     for key, value in list(content.items()):
         if ("MODEL_" in key) or ("SOLVER_" in key):
@@ -104,7 +105,7 @@ class TelegramReport:
             gif = "https://media.giphy.com/media/XoCI9HIAQEz1dSIvIy/giphy.gif"
             txt = ("New run detected!\n"
                    f"Run task: {task}\n"
-                   f"Number of iterations: {iter}\n"
+                   f"Number of samples: {iter}\n"
                    f"Number of epochs: {epochs}\n"
                    "\n"
                    f"Running on: {device}")
@@ -113,13 +114,14 @@ class TelegramReport:
         else:
             pass
 
-    def end_eval(results, verbose=0):
+    def end_eval(best_trial, verbose=0):
         if verbose != 0:
             gif = "https://media.giphy.com/media/wJ6mHEehNx3OsE3LCD/giphy.gif"
             txt = ("###################\n"
                    "Run Finished\n"
-                   f"Best parameters: {results['best_params']}\n"
-                   f"Best accuracy: {results['best_objective']}")
+                   f"Best tial loss: {best_trial.last_result['loss']}\n"
+                   f"Best tial dir: {best_trial.logdir['loss']}\n"
+                   f"Best trial parameters: {best_trial.config}")
 
             telegram_send.send(captions=[txt], animations=[gif])
         else:
