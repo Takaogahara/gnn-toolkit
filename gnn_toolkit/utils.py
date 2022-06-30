@@ -1,25 +1,26 @@
 import yaml
 import psutil
-from pynvml.smi import nvidia_smi
 import telegram_send
+from ray import tune
 from datetime import datetime
+from pynvml.smi import nvidia_smi
 
 
 parameters = {"TASK": ["Classification"],
 
               "RUN_NAME": ["None"],
-              "RUN_MANGO_ITER": [1],
               "RUN_MLFLOW_URI": ["http://localhost:5000"],
+              "RUN_RAY_SAMPLES": [1],
+              "RUN_RAY_MAX_EPOCH": [1],
+              "RUN_RAY_CPU": [2],
+              "RUN_RAY_GPU": [0],
+              "RUN_RAY_TIME_BUDGET_S": [None],
               "RUN_TELEGRAM_VERBOSE": [0],
 
               "DATA_DATALOADER": ["Default"],
               "DATA_PREMADE": [True],
-              "DATA_RAW_PATH": ["path/to/data"],
-              "DATA_RAW_FILE_NAME_TRAIN": ["filename.csv"],
-              "DATA_RAW_FILE_NAME_TEST": ["filename.csv"],
-              "DATA_RAW_FILE_NAME_VAL": ["filename.csv"],
-              "DATA_BATCH_SIZE": [32],
-              "DATA_NUM_EPOCH": [1],
+              "DATA_ROOT_PATH": ["path/to/data"],
+              "DATA_FILE_NAME": ["filename.csv"],
 
               "MODEL_USE_TRANSFER": [False],
               "MODEL_TRANSFER_PATH":  ["path/to/model"],
@@ -33,6 +34,8 @@ parameters = {"TASK": ["Classification"],
               "MODEL_TOP_K_RATIO": [0.5],
               "MODEL_TOP_K_EVERY_N": [1],
 
+              "SOLVER_BATCH_SIZE": [32],
+              "SOLVER_NUM_EPOCH": [1],
               "SOLVER_OPTIMIZER": ["SGD"],
               "SOLVER_LEARNING_RATE": [0.01],
               "SOLVER_L2_PENALTY": [0.001],
@@ -42,71 +45,67 @@ parameters = {"TASK": ["Classification"],
               "SOLVER_ADAM_BETA_1": [0.9],
               "SOLVER_ADAM_BETA_2": [0.999]}
 
-# * Add new targets to get_param func
-targets = ["DATA_", "SOLVER_", "MODEL_"]
 
+def get_ray_config(yaml_path: str):
+    """ Open YAML file and and process to parse in Ray Tune
 
-class ConfigFile:
-    def __init__(config):
-        pass
+    Args:
+        yaml_path (str): path to YAML file
 
-    def get_raw_config(self, yaml_path: str):
-        """ Open YAML file and and process to parse in Mango
+    Returns:
+        Dict: Processed YAML file
+    """
+    with open(yaml_path, "r") as f:
+        file = yaml.safe_load(f)
 
-        Args:
-            yaml_path (str): path to YAML file
+    content = {"TASK": file["TASK"]}
+    content_list = [file["RUN"], file["DATA"],
+                    file["MODEL"], file["SOLVER"]]
 
-        Returns:
-            Dict: Processed YAML file (CONFIG)
-        """
-        with open(yaml_path, "r") as f:
-            file = yaml.safe_load(f)
+    for value in content_list:
+        for item in value:
+            key, value = list(item.items())[0]
+            content[key] = value
 
-        content = {"TASK": file["TASK"]}
-        content_list = [file["RUN"], file["DATA"],
-                        file["MODEL"], file["SOLVER"]]
-
-        for value in content_list:
-            for item in value:
-                key, value = list(item.items())[0]
-                content[key] = value
-
-        # * Auto complete config file
-        for key, value in list(content.items()):
+    # TODO: Fix auto complete
+    # * Auto complete config file
+    for key, value in list(content.items()):
+        if ("MODEL_" in key) or ("SOLVER_" in key):
+            parameters[key] = tune.choice(value)
+        else:
             parameters[key] = value
 
-        return parameters
+    return parameters
 
-    def extract_cfg(self, config_file: dict, return_self=False):
-        """Extract YAML file
 
-        Args:
-            config_file (dict): Processed YAML file
+def extract_configs(config_file: dict):
+    """Extract YAML file
 
-        Returns:
-            Dict: Extracted YAML file
-        """
+    Args:
+        config_file (dict): Processed YAML file
 
-        # * Extract config file
-        if len(config_file) == 1:
-            config_file = config_file[0]
+    Returns:
+        Dict: Extracted YAML file
+    """
 
-        parameters_new = {k: v for k, v in config_file.items()}
-        parameters_new["TASK"] = config_file["TASK"]
+    # * Extract config file
+    parameters_new = {}
+    for key, value in config_file.items():
+        if isinstance(value, list):
+            parameters_new[key] = value[0]
+        else:
+            parameters_new[key] = value
 
-        if return_self:
-            self.cfg = parameters
-
-        return parameters
+    return parameters_new
 
 
 class TelegramReport:
-    def start_mango(device, task, iter, epochs, verbose=0):
+    def start_eval(device, task, iter, epochs, verbose=0):
         if verbose != 0:
             gif = "https://media.giphy.com/media/XoCI9HIAQEz1dSIvIy/giphy.gif"
             txt = ("New run detected!\n"
                    f"Run task: {task}\n"
-                   f"Number of iterations: {iter}\n"
+                   f"Number of samples: {iter}\n"
                    f"Number of epochs: {epochs}\n"
                    "\n"
                    f"Running on: {device}")
@@ -115,13 +114,14 @@ class TelegramReport:
         else:
             pass
 
-    def end_mango(results, verbose=0):
+    def end_eval(best_trial, verbose=0):
         if verbose != 0:
             gif = "https://media.giphy.com/media/wJ6mHEehNx3OsE3LCD/giphy.gif"
             txt = ("###################\n"
                    "Run Finished\n"
-                   f"Best parameters: {results['best_params']}\n"
-                   f"Best accuracy: {results['best_objective']}")
+                   f"Best tial loss: {best_trial.last_result['loss']}\n"
+                   f"Best tial dir: {best_trial.logdir['loss']}\n"
+                   f"Best trial parameters: {best_trial.config}")
 
             telegram_send.send(captions=[txt], animations=[gif])
         else:
