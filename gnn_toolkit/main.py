@@ -45,6 +45,7 @@ class RayExperiment:
         self.cpu = ray_space["RUN_RAY_CPU"][0]
         self.gpu = ray_space["RUN_RAY_GPU"][0]
         self.budget = ray_space["RUN_RAY_TIME_BUDGET_S"][0]
+        self.resume = ray_space["RUN_RAY_RESUME"][0]
 
         self.mlflow_uri = ray_space["RUN_MLFLOW_URI"][0]
         self.telegram = ray_space["RUN_TELEGRAM_VERBOSE"][0]
@@ -56,7 +57,10 @@ class RayExperiment:
             self.experiment_name = str(uuid.uuid4()).split("-")[0]
 
         ray_space["MLFLOW_NAME"] = [self.experiment_name]
-        mlflow.create_experiment(self.experiment_name)
+        try:
+            mlflow.create_experiment(self.experiment_name)
+        except Exception:
+            pass
         ray_space["mlflow"] = {"experiment_name": self.experiment_name,
                                "tracking_uri": mlflow.get_tracking_uri()}
 
@@ -82,7 +86,8 @@ class RayExperiment:
                           local_dir="./ray_results",
                           trial_name_creator=trial_str_creator,
                           trial_dirname_creator=trial_str_creator,
-                          verbose=3)
+                          verbose=3,
+                          resume=self.resume)
 
         best_trial = result.get_best_trial("loss", "min", "last")
         print(f"\nBest parameters: {best_trial.config}\n")

@@ -15,6 +15,7 @@ parameters = {"TASK": ["Classification"],
               "RUN_RAY_CPU": [2],
               "RUN_RAY_GPU": [0],
               "RUN_RAY_TIME_BUDGET_S": [None],
+              "RUN_RAY_RESUME": [False],
               "RUN_TELEGRAM_VERBOSE": [0],
 
               "DATA_DATALOADER": ["Default"],

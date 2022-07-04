@@ -31,6 +31,10 @@ RUN:
 - RUN_RAY_GPU: [0]
 # Time budget to kill trials
 - RUN_RAY_TIME_BUDGET_S: [None]
+# Resume Ray Tune run
+    # - False
+    # - "Auto"
+- RUN_RAY_RESUME: [False]
 # Telegram updates verbose
     # - 0 - None
     # - 1 - Start/end

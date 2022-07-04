@@ -31,6 +31,7 @@ def fit(model, parameters: dict, optimizer, loss_fn,
 
     # * Start run
     # print("\n############################################## Start")
+    best_loss = 1000
 
     for epoch in range(1, num_epoch+1):
         # * TRAIN
@@ -47,10 +48,14 @@ def fit(model, parameters: dict, optimizer, loss_fn,
 
         torch_scheduler.step()
 
-        # * Save checkpoint
-        with tune.checkpoint_dir(step=epoch) as checkpoint_dir:
-            path = os.path.join(checkpoint_dir, "checkpoint")
-            torch.save((model.state_dict(), optimizer.state_dict()), path)
+        # * Save best model
+        if loss_ts < best_loss:
+            best_loss = loss_ts
+
+            # * Save checkpoint
+            with tune.checkpoint_dir(step=1) as checkpoint_dir:
+                path = os.path.join(checkpoint_dir, "checkpoint")
+                torch.save((model.state_dict(), optimizer.state_dict()), path)
 
         tune.report(loss=loss_ts)
     # print(f"Finishing training with best test loss: {best_loss}")
