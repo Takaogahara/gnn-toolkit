@@ -1,6 +1,6 @@
 # **Graph Neural Network Toolkit**
 
-### Latest version: 0.3.0
+### Latest version: 0.3.1
 <br/>
 
 ## Features of this package
