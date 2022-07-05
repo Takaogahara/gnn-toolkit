@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 
 def numeric_scorer(y_true, y_pred):
@@ -66,7 +67,7 @@ def concordance_correlation(y_true, y_pred):
     return ccc
 
 
-def q2_functions(y_true, y_pred):
+def q2_3_function(y_true, y_pred):
     """_summary_
 
     Args:
@@ -76,17 +77,45 @@ def q2_functions(y_true, y_pred):
     Returns:
         _type_: _description_
     """
-    y_true_train = 1
+    res_SS = ((y_true - y_pred) ** 2).sum(dtype=np.float64)
+    tot_SS = ((y_true - np.average(y_true)) ** 2).sum(dtype=np.float64)
 
-    press = np.sum((y_true - y_pred)**2)
-    tss_tr = np.sum((y_true - np.mean(y_true_train)) ** 2)
-    tss_ext = np.sum((y_true - np.mean(y_true)) ** 2)
+    q2f3 = 1 - ((res_SS / len(y_true)) / (tot_SS / len(y_true)))
 
-    q2f1 = 1 - (press / tss_tr)
-    q2f2 = 1 - (press / tss_ext)
+    return q2f3
 
-    numerator = press / len(y_true)
-    denominator = tss_tr / press/len(y_true_train)
-    q2f3 = 1 - (numerator / denominator)
 
-    return (q2f1, q2f2, q2f3)
+def tropsha_roy_criteria(y_true, y_pred):
+    """_summary_
+
+    Args:
+        y_true (_type_): _description_
+        y_pred (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    # * Tropsha criteria
+    kappa_1 = ((y_true - y_pred).sum(
+        dtype=np.float64)) / ((y_pred) ** 2).sum(dtype=np.float64)
+    y_kappa_1 = y_pred * kappa_1
+    numerator_1 = ((y_pred - y_kappa_1) ** 2).sum(dtype=np.float64)
+    denominator_1 = ((y_pred - np.average(y_pred)) ** 2).sum(dtype=np.float64)
+    r0_1 = 1 - (numerator_1 / denominator_1)
+
+    kappa_2 = ((y_true - y_pred).sum(
+        dtype=np.float64)) / ((y_true) ** 2).sum(dtype=np.float64)
+    y_kappa_2 = y_true * kappa_2
+    numerator_2 = ((y_true - y_kappa_2) ** 2).sum(dtype=np.float64)
+    denominator_2 = ((y_true - np.average(y_true)) ** 2).sum(dtype=np.float64)
+    r0_2 = 1 - (numerator_2 / denominator_2)
+
+    # * Roy criteria
+    res_SS = ((y_true - y_pred) ** 2).sum(dtype=np.float64)
+    tot_SS = ((y_true - np.average(y_true)) ** 2).sum(dtype=np.float64)
+    r2 = 1 - (res_SS / tot_SS)
+
+    r2_m = r2 * (1 - math.sqrt(r2 - r0_1))
+    delta_r2_m = abs(r2 - r0_1)
+
+    return [r0_1, r0_2], [r2_m, delta_r2_m]
