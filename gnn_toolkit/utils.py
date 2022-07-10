@@ -121,7 +121,7 @@ class TelegramReport:
             txt = ("###################\n"
                    "Run Finished\n"
                    f"Best tial loss: {best_trial.last_result['loss']}\n"
-                   f"Best tial dir: {best_trial.logdir['loss']}\n"
+                   f"Best tial dir: {best_trial.logdir}\n"
                    f"Best trial parameters: {best_trial.config}")
 
             telegram_send.send(captions=[txt], animations=[gif])

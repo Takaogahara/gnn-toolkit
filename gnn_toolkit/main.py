@@ -87,7 +87,8 @@ class RayExperiment:
                           trial_name_creator=trial_str_creator,
                           trial_dirname_creator=trial_str_creator,
                           verbose=3,
-                          resume=self.resume)
+                          resume=self.resume,
+                          raise_on_failed_trial=False)
 
         best_trial = result.get_best_trial("loss", "min", "last")
         print(f"\nBest parameters: {best_trial.config}\n")
@@ -104,7 +105,6 @@ class RayExperiment:
 
         test_best_model(best_config)
         print(f"Best trial dir: {best_trial.logdir}")
-        # TODO: Save best model
 
 
 ray_tune = RayExperiment(ray_space)
