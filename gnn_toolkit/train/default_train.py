@@ -1,14 +1,16 @@
+import os
 import torch
 import numpy as np
+from ray import tune
 from tqdm import tqdm
 import mlflow.pytorch
-from mlflow.models.signature import ModelSignature
-from mlflow.types.schema import Schema, TensorSpec
+from ray.tune.integration.mlflow import mlflow_mixin
 
 from metrics.default_metrics import log_metrics
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
+@mlflow_mixin
 def fit(model, parameters: dict, optimizer, loss_fn,
         loader_train, loader_test, torch_scheduler):
     """Control training phase
@@ -25,55 +27,39 @@ def fit(model, parameters: dict, optimizer, loss_fn,
     Returns:
         int: Best loss
     """
-    num_epoch = parameters["DATA_NUM_EPOCH"]
+    num_epoch = parameters["SOLVER_NUM_EPOCH"]
 
     # * Start run
-    print("\n############################################## Start")
+    # print("\n############################################## Start")
     best_loss = 1000
-    early_stopping_counter = 0
 
     for epoch in range(1, num_epoch+1):
         # * TRAIN
         model.train()
-        loss = _train_epoch(parameters, model, optimizer, loss_fn,
-                            loader_train, epoch, num_epoch)
-        mlflow.log_metric(key="Train loss", value=float(loss), step=epoch)
+        loss_tr = _train_epoch(parameters, model, optimizer, loss_fn,
+                               loader_train, epoch, num_epoch)
+        mlflow.log_metric(key="Train loss", value=float(loss_tr), step=epoch)
 
         # * TEST
         model.eval()
-        if (epoch % 5 == 0) or (epoch == 1):
-            loss = _test_epoch(parameters, model, loss_fn,
-                               loader_test, epoch)
-            mlflow.log_metric(key="Test loss", value=float(loss), step=epoch)
-
-            # * Update update best loss
-            if float(loss) < best_loss:
-                best_loss = loss
-
-                # * Save the currently best model and early stop
-                requirements = "./requirements.txt"
-                signature = get_mlflow_signature(parameters)
-                mlflow.pytorch.log_model(model, "model",
-                                         signature=signature,
-                                         pip_requirements=requirements)
-
-                early_stopping_counter = 0
-
-            # * Update esarly stop
-            else:
-                early_stopping_counter += 1
+        loss_ts = _test_epoch(parameters, model, loss_fn,
+                              loader_test, epoch)
+        mlflow.log_metric(key="Test loss", value=float(loss_ts), step=epoch)
 
         torch_scheduler.step()
 
-        if early_stopping_counter > 5:
-            print("Early stopping due to no improvement.\n")
-            print(f"Finishing training with best test loss: {best_loss}")
-            print("############################################## End\n")
-            return [best_loss]
+        # * Save best model
+        if loss_ts < best_loss:
+            best_loss = loss_ts
 
-    print(f"Finishing training with best test loss: {best_loss}")
-    print("############################################## End\n")
-    return [best_loss]
+            # * Save checkpoint
+            with tune.checkpoint_dir(step=1) as checkpoint_dir:
+                path = os.path.join(checkpoint_dir, "checkpoint")
+                torch.save((model.state_dict(), optimizer.state_dict()), path)
+
+        tune.report(loss=loss_ts)
+    # print(f"Finishing training with best test loss: {best_loss}")
+    # print("############################################## End\n")
 
 
 def _train_epoch(parameters, model, optimizer, loss_fn,
@@ -93,7 +79,6 @@ def _train_epoch(parameters, model, optimizer, loss_fn,
         float: Loss
     """
     task = parameters["TASK"]
-    name = parameters["RUN_NAME"]
 
     all_preds = []
     all_labels = []
@@ -102,7 +87,8 @@ def _train_epoch(parameters, model, optimizer, loss_fn,
 
     txt = f"Epoch {current_epoch}/{num_epoch}"
     unit = "batch"
-    with tqdm(loader, ncols=120, unit=unit, desc=txt) as bar:
+    with tqdm(loader, ncols=120, unit=unit,
+              desc=txt, disable=True) as bar:
         for batch in bar:
 
             # * Use GPU
@@ -144,7 +130,7 @@ def _train_epoch(parameters, model, optimizer, loss_fn,
         all_preds = np.concatenate(all_preds).ravel()
         all_labels = np.concatenate(all_labels).ravel()
 
-        log_metrics(task, name, "train", current_epoch, all_preds, all_labels)
+        log_metrics(task, "train", current_epoch, all_preds, all_labels)
 
         return running_loss/step
 
@@ -165,7 +151,6 @@ def _test_epoch(parameters, model, loss_fn, loader,
         float: Loss
     """
     task = parameters["TASK"]
-    name = parameters["RUN_NAME"]
 
     all_preds = []
     all_labels = []
@@ -198,33 +183,6 @@ def _test_epoch(parameters, model, loss_fn, loader,
     all_preds = np.concatenate(all_preds).ravel()
     all_labels = np.concatenate(all_labels).ravel()
 
-    log_metrics(task, name, "test", current_epoch, all_preds, all_labels)
+    log_metrics(task, "test", current_epoch, all_preds, all_labels)
 
     return running_loss/step
-
-
-def get_mlflow_signature(params_model):
-    """Calculate positive class weight to use in solver
-
-    Args:
-        dataset_train (Pytorch dataset): Generated dataset
-
-    Returns:
-        float: Weight
-    """
-    input_schema = Schema([TensorSpec(np.dtype(np.float32),
-                                      (-1, params_model["MODEL_FEAT_SIZE"]),
-                                      name="x"),
-                           TensorSpec(np.dtype(np.float32),
-                                      (-1, params_model["MODEL_EDGE_DIM"]),
-                                      name="edge_attr"),
-                           TensorSpec(np.dtype(np.int32),
-                                      (2, -1), name="edge_index"),
-                           TensorSpec(np.dtype(np.int32), (-1, 1),
-                                      name="batch_index")])
-
-    output_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, 1))])
-
-    signature = ModelSignature(inputs=input_schema, outputs=output_schema)
-
-    return signature

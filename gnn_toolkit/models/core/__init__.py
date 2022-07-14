@@ -10,6 +10,5 @@ __all__ = [
     "CGC",
     "ECC",
     "GAT",
-    "Transformer", ]
-
-classes = __all__
+    "Transformer",
+]

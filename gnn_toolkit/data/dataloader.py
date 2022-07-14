@@ -1,12 +1,16 @@
+from filelock import FileLock
 from torch.utils.data import random_split
 from torch_geometric.loader import DataLoader
 
-from .core import MoleculeDataset, benchmark_MoleculeNet
+from .core import benchmark_MoleculeNet, MoleculeDataset
 
 available_loaders = ["default", "moleculenet"]
+moleculenet_dataset = ["esol", "freesolv", "lipo", "pcba",
+                       "muv", "hiv", "bace", "bbpb", "tox21",
+                       "toxcast", "sider", "clintox"]
 
 
-def default_dataloader(parameters: dict):
+def default_dataloader(parameters: dict, checkpoint=False):
     """Create dafault Dataloader
 
     Args:
@@ -14,44 +18,67 @@ def default_dataloader(parameters: dict):
     """
     task = parameters["TASK"]
     loader = parameters["DATA_DATALOADER"]
-    batch_size = parameters["DATA_BATCH_SIZE"]
+    batch_size = parameters["SOLVER_BATCH_SIZE"]
     premade = parameters["DATA_PREMADE"]
 
-    path_raw = parameters["DATA_RAW_PATH"]
-    name_train = parameters["DATA_RAW_FILE_NAME_TRAIN"]
-    name_test = parameters["DATA_RAW_FILE_NAME_TEST"]
-    name_val = parameters["DATA_RAW_FILE_NAME_VAL"]
+    path_raw = parameters["DATA_ROOT_PATH"]
+    name_train = parameters["DATA_FILE_NAME"]
 
     if loader.lower() not in available_loaders:
         raise RuntimeError("Wrong loader, Available: \n"
                            f"{available_loaders}")
 
+    # * Get dataset
     if loader.lower() == "default":
-        # * Get dataset
         if premade:
-            # Use pre made dataset
-            set_train = MoleculeDataset(path_raw, name_train, task)
-            set_test = MoleculeDataset(path_raw, name_test, task, test=True)
-            _ = MoleculeDataset(path_raw, name_val, task, val=True)
+            # Get premade split
+            with FileLock(f"{path_raw}raw/{name_train}.lock"):
+                dataset = MoleculeDataset(path_raw, name_train, task, True)
+                set_train, set_test, valid_set = _get_premade_loaders(dataset)
 
         else:
             # Get random split (80, 10, 10)
-            dataset = MoleculeDataset(path_raw, name_train, task)
-            lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
-            lengths += [len(dataset) - sum(lengths)]
-            set_train, set_test, _ = random_split(dataset, lengths)
-            set_train = set_train.dataset
-            set_test = set_test.dataset
+            # TODO: Check for errors in random split
+            with FileLock(f"{path_raw}raw/{name_train}.lock"):
+                dataset = MoleculeDataset(path_raw, name_train, task)
+                lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
+                lengths += [len(dataset) - sum(lengths)]
+                set_train, set_test, valid_set = random_split(dataset, lengths)
+                set_train = set_train.dataset
+                set_test = set_test.dataset
+                valid_set = valid_set.dataset
 
-        loader_train = DataLoader(set_train,
-                                  batch_size=batch_size,
-                                  shuffle=True)
-        loader_test = DataLoader(set_test,
-                                 batch_size=batch_size,
-                                 shuffle=True)
+        ldl_train = DataLoader(set_train,
+                               batch_size=batch_size,
+                               shuffle=True)
+        ldl_test = DataLoader(set_test,
+                              batch_size=batch_size,
+                              shuffle=True)
+        ldl_valid = DataLoader(valid_set,
+                               batch_size=batch_size,
+                               shuffle=True)
 
-    elif loader.lower() == "moleculenet":
-        loader_train, loader_test, _ = benchmark_MoleculeNet(path_raw, "HIV",
-                                                             batch_size)
+    elif loader.lower() in moleculenet_dataset:
+        ldl_train, ldl_test, ldl_valid = benchmark_MoleculeNet(path_raw,
+                                                               loader.lower(),
+                                                               batch_size)
 
-    return loader_train, loader_test
+    if checkpoint:
+        return ldl_valid
+    else:
+        return ldl_train, ldl_test
+
+
+def _get_premade_loaders(dataset):
+    train = [dataset[x].index for x in range(len(dataset)
+                                             ) if dataset[x].set == "Train"]
+    test = [dataset[x].index for x in range(len(dataset)
+                                            ) if dataset[x].set == "Test"]
+    valid = [dataset[x].index for x in range(len(dataset)
+                                             ) if dataset[x].set == "Valid"]
+
+    set_train = dataset[train]
+    set_test = dataset[test]
+    set_valid = dataset[valid]
+
+    return set_train, set_test, set_valid

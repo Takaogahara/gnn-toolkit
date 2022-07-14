@@ -11,7 +11,7 @@ available_models = {"transformer": core.Transformer,
                     "attentivefp": core.Attentive}
 
 
-def model_selection(parameters: dict):
+def model_selection(parameters: dict, checkpoint=False):
     """Select model
 
     Args:
@@ -26,6 +26,17 @@ def model_selection(parameters: dict):
     model_name = parameters["MODEL_ARCHITECTURE"]
     is_transfer = parameters["MODEL_USE_TRANSFER"]
     transfer_path = parameters["MODEL_TRANSFER_PATH"]
+
+    if checkpoint:
+        model = available_models[model_name.lower()]
+        model = model(model_params=parameters)
+
+        chkp_path = parameters["chkp_path"]
+        model_state, _ = torch.load(chkp_path)
+        model.load_state_dict(model_state)
+        model = model.to(device)
+
+        return model
 
     if is_transfer:
         model = torch.load(transfer_path)
