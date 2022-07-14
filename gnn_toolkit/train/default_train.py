@@ -6,7 +6,7 @@ from tqdm import tqdm
 import mlflow.pytorch
 from ray.tune.integration.mlflow import mlflow_mixin
 
-from .default_metrics import log_metrics
+from metrics.default_metrics import log_metrics
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
