@@ -9,6 +9,7 @@ from ray.tune.schedulers import ASHAScheduler
 from logo import print_logo
 from utils import get_ray_config, TelegramReport
 from run import gnn_toolkit, test_best_model
+from evaluation.predict import predict_model
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -101,9 +102,9 @@ class RayExperiment:
         best_config = best_trial.config
 
         chkp_path = os.path.join(best_trial.checkpoint.value, "checkpoint")
-        best_trial.config["chkp_path"] = chkp_path
+        best_trial.config["MODEL_CHECKPOINT_PATH"] = chkp_path
 
-        test_best_model(best_config)
+        predict_model(best_config)
         print(f"Best trial dir: {best_trial.logdir}")
 
 
