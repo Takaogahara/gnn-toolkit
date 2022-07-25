@@ -12,6 +12,6 @@ def print_logo():
                                                      "Y888 `"YbbdP"'   `"YbbdP"'  88 88   `Y8a 88   "Y888
 
                                              Graph Neural Network Toolkit
-                                                   Version: 0.3.1
+                                                   Version: 0.3.2
 
 """)
