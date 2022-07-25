@@ -23,6 +23,7 @@ parameters = {"TASK": ["Classification"],
               "DATA_ROOT_PATH": ["path/to/data"],
               "DATA_FILE_NAME": ["filename.csv"],
 
+              "MODEL_CHECKPOINT_PATH": [None],
               "MODEL_USE_TRANSFER": [False],
               "MODEL_TRANSFER_PATH":  ["path/to/model"],
               "MODEL_ARCHITECTURE": ["GAT"],

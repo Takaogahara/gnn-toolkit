@@ -34,7 +34,7 @@ def model_selection(parameters: dict, checkpoint=False):
         model = available_models[model_name.lower()]
         model = model(model_params=parameters)
 
-        chkp_path = parameters["chkp_path"]
+        chkp_path = parameters["MODEL_CHECKPOINT_PATH"]
         model_state, _ = torch.load(chkp_path)
         model.load_state_dict(model_state)
         model = model.to(device)
