@@ -73,31 +73,34 @@ MODEL:
 # Transfer learning model path
 - MODEL_TRANSFER_PATH:  ["path/to/model"]
 # Model architecture
-    # - Transformer
-    # - GAT
-    # - ECC
-    # - CGC
     # - AttentiveFP
-- MODEL_ARCHITECTURE: ["GAT"]
+    # - CGC
+    # - GAT
+    # - GCN
+    # - GIN
+    # - GINE
+    # - GraphSage
+    # - Transformer
+- MODEL_ARCHITECTURE: ["AttentiveFP"]
 # Internal embedding size
 - MODEL_EMBEDDING_SIZE: [64]
 # Number of architecture layers
 - MODEL_NUM_LAYERS: [3]
 # Dropout rate
 - MODEL_DROPOUT_RATE: [0.2]
-# Fully connected layer size
-- MODEL_DENSE_NEURONS: [128]
 # Number of heads
     # - Transformer
     # - GAT
 - MODEL_NUM_HEADS: [1]
+# Attention V2 usage
+    # - GAT
+- MODEL_ATT_V2: [True]
 # Number of timesteps
     # - AttentiveFP
 - MODEL_NUM_TIMESTEPS: [1]
-# Pooling top K ratio
-- MODEL_TOP_K_RATIO: [0.5]
-# Pooling top K ratio
-- MODEL_TOP_K_EVERY_N: [1]
+# GCN improved usage
+    # - GCN
+- MODEL_GCN_IMPROVED: [True]
   ```
 
 ### SOLVER

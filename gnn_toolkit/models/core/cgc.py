@@ -1,9 +1,9 @@
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear, BatchNorm1d, ModuleList
+from torch.nn import Linear, ModuleList
 
 from torch_geometric.nn import CGConv
-from torch_geometric.nn import global_max_pool as gmp
+from torch_geometric.nn import global_mean_pool
 torch.manual_seed(8)
 
 
@@ -14,8 +14,7 @@ class CGC(torch.nn.Module):
         edge_dim = model_params["MODEL_EDGE_DIM"]
 
         self.n_layers = model_params["MODEL_NUM_LAYERS"]
-        self.dropout_rate = model_params["MODEL_DROPOUT_RATE"]
-        dense_neurons = model_params["MODEL_DENSE_NEURONS"]
+        self.dropout = model_params["MODEL_DROPOUT_RATE"]
 
         self.gnn_layers = ModuleList([])
 
@@ -23,33 +22,26 @@ class CGC(torch.nn.Module):
         self.cgc1 = CGConv(feature_size,
                            dim=edge_dim, batch_norm=True)
 
-        # CGC, Transform, BatchNorm block
-        for i in range(self.n_layers):
+        for i in range(self.n_layers - 1):
             self.gnn_layers.append(CGConv(feature_size,
                                           dim=edge_dim, batch_norm=True))
 
         # Linear layers
-        self.linear1 = Linear(feature_size, dense_neurons)
-        self.bn2 = BatchNorm1d(dense_neurons)
-        self.linear2 = Linear(dense_neurons, 1)
+        self.linear = Linear(feature_size, 1)
 
     def forward(self, x, edge_index, edge_attr, batch):
         # Initial CGC
         x = self.cgc1(x, edge_index, edge_attr)
 
-        for i in range(self.n_layers):
+        for i in range(self.n_layers - 1):
             x = self.gnn_layers[i](x, edge_index, edge_attr)
 
+        x = F.dropout(x, p=self.dropout, training=self.training)
+
         # Pooling
-        x = gmp(x, batch)
+        x = global_mean_pool(x, batch)
 
         # Output block
-        x = F.dropout(x, p=0.0, training=self.training)  # dropout_rate
-        x = torch.relu(self.linear1(x))
-        x = self.bn2(x)
-        x = self.linear2(x)
-
-        if torch.isnan(torch.mean(self.linear2.weight)):
-            raise RuntimeError("Exploding gradients. Tune learning rate")
+        x = self.linear(x)
 
         return x

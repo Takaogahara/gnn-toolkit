@@ -4,11 +4,14 @@ from . import core
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-available_models = {"transformer": core.Transformer,
-                    "gat": core.GAT,
-                    "ecc": core.ECC,
+available_models = {"attentivefp": core.Attentive,
+                    "transformer": core.Transformer,
                     "cgc": core.CGC,
-                    "attentivefp": core.Attentive}
+                    "gat": core.GAT,
+                    "gcn": core.GCN,
+                    "gin": core.GIN,
+                    "graphsage": core.GraphSAGE,
+                    "gine": core.GINE}
 
 
 def model_selection(parameters: dict, checkpoint=False):
