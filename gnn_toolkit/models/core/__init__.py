@@ -1,14 +1,21 @@
 from .attentive import Attentive
-from .cgc import CGC
-from .ecc import ECC
-from .gat import GAT
 from .transformer import Transformer
+from .cgc import CGC
+from .gat import GAT
+from .gcn import GCN
+from .gin import GIN
+from .sage import GraphSAGE
+from .gine import GINE
 
 
 __all__ = [
     "Attentive",
-    "CGC",
-    "ECC",
-    "GAT",
     "Transformer",
+    "CGC",
+    "GAT",
+    "GCN",
+    "GIN",
+    "GraphSAGE",
+    "GINE",
+    "RGAT",
 ]

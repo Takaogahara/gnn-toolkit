@@ -12,8 +12,8 @@ from sklearn.metrics import (f1_score, accuracy_score, precision_score,
                              ConfusionMatrixDisplay, balanced_accuracy_score)
 from deepchem.metrics import bedroc_score
 
-from default_custom import (concordance_correlation, q2_3_function,
-                            tropsha_roy_criteria)
+from .default_custom import (concordance_correlation, q2_3_function,
+                             tropsha_roy_criteria)
 mpl.rcParams['figure.figsize'] = [10, 7]
 mpl.use('Agg')
 
@@ -60,7 +60,7 @@ def _log_classification(run: str, num: int, y_pred, y_true):
     except Exception:
         roc = 0
 
-    bed_pred = np.zeros((y_pred.size, y_pred.max()+1))
+    bed_pred = np.zeros((y_pred.size, 2))
     bed_pred[np.arange(y_pred.size), y_pred] = 1
     bedroc = bedroc_score(y_true, bed_pred)
 

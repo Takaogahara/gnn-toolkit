@@ -1,17 +1,15 @@
 """torch_geometric.nn.models adaptation to perform graph classification"""
 import torch
-from torch_geometric.nn.conv import GATConv, GATv2Conv, MessagePassing
+from torch.nn import Linear, ReLU, Sequential
+from torch_geometric.nn.conv import GINConv, MessagePassing
 from .basic_gnn import BasicGNN
 torch.manual_seed(8)
 
 
-class GAT(BasicGNN):
-    r"""The Graph Neural Network from `"Graph Attention Networks"
-    <https://arxiv.org/abs/1710.10903>`_ or `"How Attentive are Graph Attention
-    Networks?" <https://arxiv.org/abs/2105.14491>`_ papers, using the
-    :class:`~torch_geometric.nn.GATConv` or
-    :class:`~torch_geometric.nn.GATv2Conv` operator for message passing,
-    respectively.
+class GIN(BasicGNN):
+    r"""The Graph Neural Network from the `"How Powerful are Graph Neural
+    Networks?" <https://arxiv.org/abs/1810.00826>`_ paper, using the
+    :class:`~torch_geometric.nn.GINConv` operator for message passing.
 
     Args:
         in_channels (int): Size of each input sample.
@@ -20,9 +18,6 @@ class GAT(BasicGNN):
         out_channels (int, optional): If not set to :obj:`None`, will apply a
             final linear transformation to convert hidden node embeddings to
             output size :obj:`out_channels`. (default: :obj:`None`)
-        v2 (bool, optional): If set to :obj:`True`, will make use of
-            :class:`~torch_geometric.nn.conv.GATv2Conv` rather than
-            :class:`~torch_geometric.nn.conv.GATConv`. (default: :obj:`False`)
         dropout (float, optional): Dropout probability. (default: :obj:`0.`)
         act (str or Callable, optional): The non-linear activation function to
             use. (default: :obj:`"relu"`)
@@ -42,33 +37,19 @@ class GAT(BasicGNN):
             (:obj:`None`, :obj:`"last"`, :obj:`"cat"`, :obj:`"max"`,
             :obj:`"lstm"`). (default: :obj:`None`)
         **kwargs (optional): Additional arguments of
-            :class:`torch_geometric.nn.conv.GATConv` or
-            :class:`torch_geometric.nn.conv.GATv2Conv`.
+            :class:`torch_geometric.nn.conv.GINConv`.
     """
 
     def init_conv(self, in_channels: int, out_channels: int,
                   **kwargs) -> MessagePassing:
 
-        v2 = kwargs.pop('v2', False)
-        heads = kwargs.pop('heads', 1)
-        concat = kwargs.pop('concat', True)
-
+        del kwargs["edge_dim"]
         del kwargs["num_timesteps"]
+        del kwargs["heads"]
+        del kwargs["v2"]
         del kwargs["improved"]
 
-        # Do not use concatenation in case the layer `GATConv` layer maps to
-        # the desired output channels (out_channels != None and jk != None):
-        if getattr(self, '_is_conv_to_out', False):
-            concat = False
+        mlp = Sequential(Linear(in_channels, out_channels),
+                         ReLU(), Linear(out_channels, out_channels))
 
-        if concat and out_channels % heads != 0:
-            raise ValueError(f"Ensure that the number of output channels of "
-                             f"'GATConv' (got '{out_channels}') is divisible "
-                             f"by the number of heads (got '{heads}')")
-
-        if concat:
-            out_channels = out_channels // heads
-
-        Conv = GATConv if not v2 else GATv2Conv
-        return Conv(in_channels, out_channels, heads=heads, concat=concat,
-                    dropout=self.dropout, **kwargs)
+        return GINConv(mlp, **kwargs)
